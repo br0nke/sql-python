@@ -37,6 +37,62 @@ main_window = sg.Window(
     finalize=True
 )
 
+def input_order(connector: sqlite3.Connection, cursor: sqlite3.Cursor):
+    main_window.hide()
+    list_layout = [
+        [sg.Text("Time to add your item for sale!")],
+        [sg.Text("Name:")],
+        [sg.InputText("", key="first_name")],
+        [sg.Text("Last Name:")],
+        [sg.InputText("", key="last_name")],
+        [sg.Text("Item Details:")],
+        [sg.Text("Item name:"), sg.InputText("", key="item_name")],
+        [sg.Text("Price:"), sg.InputText("", key="price")],
+        [sg.Text("Quantity:"), sg.InputText("", key="quantity")],
+        [sg.Submit(), sg.Cancel()]
+    ]
+
+    list_window = sg.Window(
+        "Add New Item",
+        list_layout,
+        element_padding=5,
+        resizable=True,
+        finalize=True
+    )
+
+    event, values = list_window.read()
+    if event == sg.WIN_CLOSED or event == 'Cancel':
+        print("Adding item cancelled.")
+        list_window.close()
+        main_window.un_hide()
+        return
+    
+    if event == 'Submit':
+        first_name = values["first_name"]
+        last_name = values["last_name"]
+        item_name = values["item_name"]
+        price = values["price"]
+        quantity = values["quantity"]
+
+        if not all([first_name, last_name, item_name, price, quantity]):
+            print("Please fill in all fields.")
+            list_window.close()
+            main_window.un_hide()
+            return
+
+        try:
+            with connector:
+                cursor.execute("INSERT INTO customer (first_name, last_name) VALUES (?, ?)", (first_name, last_name))
+                cursor.execute("INSERT INTO products (item_name, price) VALUES (?, ?)", (item_name, price))
+                cursor.execute("INSERT INTO bill_line (quantity) VALUES (?)", (quantity,))
+                connector.commit()
+                print("Item added for the whole world to see!")
+        except Exception as e:
+            print("Error inserting into database:", e)
+
+    list_window.close()
+    main_window.un_hide()
+
 while True:
     event, values = main_window.read(timeout=0.1)
     if event in [sg.WIN_CLOSED, "-EXIT-"]:
