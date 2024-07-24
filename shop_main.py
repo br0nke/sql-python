@@ -93,6 +93,50 @@ def input_order(connector: sqlite3.Connection, cursor: sqlite3.Cursor):
     list_window.close()
     main_window.un_hide()
 
+def show_items(main_window: sg.Window):
+    main_window.hide()
+    products_list = get_items_list()
+    show_items_list = [(product[1], product[2]) for product in products_list]
+    layout = [
+        [sg.Table(show_items_list, key="-ITEMS-LIST-",
+                    headings=["Product name", "Price"],   
+                  ), sg.Button("Select", key="-SELECT-", size=6)],
+        [
+            sg.Text("Search", size=8),sg.Push(),sg.I(size=15, tooltip="Search a product by name", key="-SEARCH-", enable_events=True),sg.Push(),
+        ],
+        [
+            sg.Button("Return", key="-RETURN-", size=10),
+        ]
+    ]
+    window = sg.Window(
+        "Available Items For Sale",
+        layout,
+        element_padding=5,
+        size=(600, 500),
+        resizable=True,
+        element_justification="left",
+        finalize=True
+    )
+    while True:
+        event, values = window.read()
+        if event in [sg.WIN_CLOSED, "-RETURN-"]:
+            break
+        if event == "-SEARCH-":
+            result_list = find_by(values.get("-SEARCH-", ""))
+            window["-ITEMS-LIST-"].update(values=result_list)
+    window.close()
+    main_window.un_hide()
+
+def find_by(values):
+        with connector:
+            cursor.execute(f"SELECT * FROM products WHERE item_name LIKE '%{values}%';")
+            search_list = cursor.fetchall()
+
+            result_list = [(product[1], product[2]) for product in search_list]
+            connector.commit()
+            print("Found items:", result_list)  #Print for debugg
+            return result_list
+
 while True:
     event, values = main_window.read(timeout=0.1)
     if event in [sg.WIN_CLOSED, "-EXIT-"]:
